@@ -1,32 +1,43 @@
 # ======================================================
-# CBR PREDICTION WEB APP
+# CBR PREDICTION WEB APP – POLISHED VERSION
 # ======================================================
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+from datetime import datetime
+import io
 
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import r2_score, mean_squared_error
+
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from docx import Document
 
 # ------------------------------------------------------
-# PAGE CONFIGURATION
+# PAGE SETTINGS
 # ------------------------------------------------------
 st.set_page_config(
-    page_title="CBR Prediction App",
-    page_icon="📊",
-    layout="wide"
+    page_title="CBR Prediction Tool",
+    page_icon="🚦",
+    layout="centered"
 )
 
-st.title("📊 California Bearing Ratio (CBR) Prediction")
-st.markdown("Machine Learning based estimation for geotechnical applications")
+st.markdown(
+    "<h1 style='text-align:center;'>🚦 CBR Prediction Tool</h1>",
+    unsafe_allow_html=True
+)
+st.markdown(
+    "<p style='text-align:center;'>Machine Learning based estimation for geotechnical engineering</p>",
+    unsafe_allow_html=True
+)
 
 # ------------------------------------------------------
-# LOAD DATASET
+# LOAD DATA
 # ------------------------------------------------------
 @st.cache_data
 def load_data():
@@ -34,27 +45,17 @@ def load_data():
 
 df = load_data()
 
-st.subheader("📋 Dataset Preview")
-st.dataframe(df.head())
-
-# ------------------------------------------------------
-# DEFINE FEATURES AND TARGET
-# ------------------------------------------------------
-TARGET = "CBR"   # DO NOT CHANGE unless column name differs
-
+TARGET = "CBR"
 X = df.drop(columns=[TARGET])
 y = df[TARGET]
 
 # ------------------------------------------------------
-# TRAIN-TEST SPLIT
+# MODEL
 # ------------------------------------------------------
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.20, random_state=42
+X_train, _, y_train, _ = train_test_split(
+    X, y, test_size=0.2, random_state=42
 )
 
-# ------------------------------------------------------
-# MACHINE LEARNING PIPELINE
-# ------------------------------------------------------
 model = Pipeline([
     ("scaler", StandardScaler()),
     ("rf", RandomForestRegressor(
@@ -68,34 +69,17 @@ model = Pipeline([
 model.fit(X_train, y_train)
 
 # ------------------------------------------------------
-# MODEL PERFORMANCE
+# INPUT SECTION
 # ------------------------------------------------------
-y_pred = model.predict(X_test)
-r2 = r2_score(y_test, y_pred)
-rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-
-st.subheader("📈 Model Performance")
-col1, col2 = st.columns(2)
-col1.metric("R² Score", f"{r2:.3f}")
-col2.metric("RMSE", f"{rmse:.3f}")
-
-# ------------------------------------------------------
-# USER INPUT SECTION
-# ------------------------------------------------------
-st.sidebar.header("🔢 Enter Soil Properties")
+st.subheader("🔢 Enter Soil Properties")
 
 input_data = {}
-
 for col in X.columns:
-    min_val = float(df[col].min())
-    max_val = float(df[col].max())
-    mean_val = float(df[col].mean())
-
-    input_data[col] = st.sidebar.number_input(
+    input_data[col] = st.number_input(
         label=col,
-        min_value=min_val,
-        max_value=max_val,
-        value=mean_val
+        min_value=float(df[col].min()),
+        max_value=float(df[col].max()),
+        value=float(df[col].mean())
     )
 
 input_df = pd.DataFrame([input_data])
@@ -103,37 +87,93 @@ input_df = pd.DataFrame([input_data])
 # ------------------------------------------------------
 # PREDICTION
 # ------------------------------------------------------
-st.subheader("🎯 Predicted CBR Value")
+if st.button("🔍 Predict CBR"):
+    prediction = float(model.predict(input_df)[0])
 
-if st.button("Predict CBR"):
-    prediction = model.predict(input_df)[0]
-
+    # Traffic light logic
     if prediction < 3:
-        st.error(f"Predicted CBR = {prediction:.2f} % (Very Poor Subgrade)")
-    elif 3 <= prediction < 5:
-        st.warning(f"Predicted CBR = {prediction:.2f} % (Poor Subgrade)")
-    elif 5 <= prediction < 10:
-        st.info(f"Predicted CBR = {prediction:.2f} % (Fair Subgrade)")
+        color, quality = "red", "Very Poor Subgrade"
+    elif prediction < 5:
+        color, quality = "orange", "Poor Subgrade"
+    elif prediction < 10:
+        color, quality = "yellow", "Fair Subgrade"
     else:
-        st.success(f"Predicted CBR = {prediction:.2f} % (Good Subgrade)")
+        color, quality = "green", "Good Subgrade"
 
-# ------------------------------------------------------
-# FEATURE IMPORTANCE
-# ------------------------------------------------------
-st.subheader("🔍 Feature Importance")
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=prediction,
+        number={"suffix": " %"},
+        gauge={
+            "axis": {"range": [0, 20]},
+            "bar": {"color": color},
+            "steps": [
+                {"range": [0, 3], "color": "red"},
+                {"range": [3, 5], "color": "orange"},
+                {"range": [5, 10], "color": "yellow"},
+                {"range": [10, 20], "color": "green"}
+            ]
+        },
+        title={"text": "Predicted CBR"}
+    ))
 
-importances = model.named_steps["rf"].feature_importances_
-feat_imp = pd.Series(importances, index=X.columns).sort_values()
+    st.plotly_chart(fig, use_container_width=True)
+    st.success(f"**Soil Classification:** {quality}")
 
-fig, ax = plt.subplots(figsize=(7, 4))
-feat_imp.plot(kind="barh", ax=ax)
-ax.set_xlabel("Importance")
-ax.set_title("Random Forest Feature Importance")
+    # --------------------------------------------------
+    # REPORTS
+    # --------------------------------------------------
+    now = datetime.now().strftime("%d-%m-%Y %H:%M")
 
-st.pyplot(fig)
+    # PDF
+    pdf_buffer = io.BytesIO()
+    c = canvas.Canvas(pdf_buffer, pagesize=A4)
+    c.setFont("Times-Roman", 12)
+    c.drawString(50, 800, "CBR Prediction Report")
+    c.drawString(50, 780, f"Generated on: {now}")
+    c.drawString(50, 750, f"Predicted CBR: {prediction:.2f} %")
+    c.drawString(50, 730, f"Soil Quality: {quality}")
 
-# ------------------------------------------------------
-# FOOTER
-# ------------------------------------------------------
+    y_pos = 700
+    for k, v in input_data.items():
+        c.drawString(50, y_pos, f"{k}: {v}")
+        y_pos -= 18
+
+    c.save()
+    pdf_buffer.seek(0)
+
+    # Word
+    doc = Document()
+    doc.add_heading("CBR Prediction Report", level=1)
+    doc.add_paragraph(f"Generated on: {now}")
+    doc.add_paragraph(f"Predicted CBR: {prediction:.2f} %")
+    doc.add_paragraph(f"Soil Quality: {quality}")
+    doc.add_heading("Input Parameters", level=2)
+
+    for k, v in input_data.items():
+        doc.add_paragraph(f"{k}: {v}")
+
+    word_buffer = io.BytesIO()
+    doc.save(word_buffer)
+    word_buffer.seek(0)
+
+    col1, col2 = st.columns(2)
+    col1.download_button(
+        "📄 Download PDF Report",
+        pdf_buffer,
+        "CBR_Report.pdf",
+        "application/pdf"
+    )
+    col2.download_button(
+        "📝 Download Word Report",
+        word_buffer,
+        "CBR_Report.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+
 st.markdown("---")
-st.markdown("Developed for academic and research purposes")
+st.markdown(
+    "<p style='text-align:center;'>Developed for academic & professional use</p>",
+    unsafe_allow_html=True
+)
+
