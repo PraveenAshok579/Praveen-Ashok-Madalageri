@@ -1,6 +1,6 @@
 # ======================================================
-# CBR PREDICTION WEB APP – FINAL REGULATORY VERSION
-# (EPA / CPCB COMPLIANT + WHITE CONCLUSION TEXT)
+# CBR PREDICTION WEB APP – FINAL Q1 JOURNAL VERSION
+# (LANDFILL + PAVEMENT SUBGRADE APPLICATIONS)
 # ======================================================
 
 import streamlit as st
@@ -22,13 +22,13 @@ from docx import Document
 # PAGE CONFIGURATION
 # ------------------------------------------------------
 st.set_page_config(
-    page_title="CBR Prediction Tool",
+    page_title="CBR prediction using machine learning models",
     page_icon="🚦",
     layout="centered"
 )
 
 # ------------------------------------------------------
-# DARK THEME + WHITE TEXT ENFORCEMENT
+# DARK THEME + WHITE TEXT
 # ------------------------------------------------------
 st.markdown("""
 <style>
@@ -55,11 +55,10 @@ button {
 # ------------------------------------------------------
 # TITLE
 # ------------------------------------------------------
-st.markdown("<h1>🚦 CBR Prediction Tool</h1>", unsafe_allow_html=True)
+st.markdown("<h1>🚦 CBR prediction using machine learning models</h1>", unsafe_allow_html=True)
 st.markdown(
     "<p style='color:#b0b0b0;'>"
-    "Machine-learning-based regulatory decision-support tool "
-    "for landfill liner and cover applications (EPA / CPCB context)"
+    "Decision-support tool for landfill liner & cover and pavement subgrade applications"
     "</p>",
     unsafe_allow_html=True
 )
@@ -132,17 +131,17 @@ if st.button("🔍 Predict CBR"):
     prediction = float(model.predict(input_df)[0])
 
     if prediction < 3:
-        color, quality = "red", "Very Poor Subgrade"
-        compliance = "❌ Not compliant with EPA / CPCB landfill requirements"
+        color = "red"
+        quality = "Very Poor"
     elif prediction < 5:
-        color, quality = "orange", "Poor Subgrade"
-        compliance = "⚠️ Conditionally compliant (stabilization required)"
+        color = "orange"
+        quality = "Poor"
     elif prediction < 10:
-        color, quality = "yellow", "Fair Subgrade"
-        compliance = "✅ Compliant for landfill cover; liner with design controls"
+        color = "yellow"
+        quality = "Fair"
     else:
-        color, quality = "green", "Good Subgrade"
-        compliance = "✅ Fully compliant for landfill liner and cover systems"
+        color = "green"
+        quality = "Good"
 
     # Gauge
     fig = go.Figure(go.Indicator(
@@ -156,99 +155,131 @@ if st.button("🔍 Predict CBR"):
                 {"range": [0, 3], "color": "red"},
                 {"range": [3, 5], "color": "orange"},
                 {"range": [5, 10], "color": "yellow"},
-                {"range": [10, 20], "color": "green"},
+                {"range": [10, 20], "color": "green"}
             ]
         },
         title={"text": "Predicted CBR"}
     ))
 
     st.plotly_chart(fig, use_container_width=True)
-    st.success(f"**Soil Classification:** {quality}")
-    st.success(f"**Regulatory Status:** {compliance}")
+    st.success(f"**Subgrade Quality:** {quality}")
 
-    # --------------------------------------------------
-    # REGULATORY CONCLUSION (WHITE TEXT)
-    # --------------------------------------------------
-    st.subheader("🧾 Engineering & Regulatory Conclusion (EPA / CPCB)")
+    # ==================================================
+    # LANDFILL CONCLUSION
+    # ==================================================
+    st.subheader("🧾 Engineering Conclusion – Landfill Liner & Cover")
 
     if prediction < 3:
-        conclusion = (
-            "Based on the predicted CBR value, the soil exhibits very low strength and "
-            "poor trafficability. According to EPA landfill construction guidance and "
-            "CPCB solid waste management practice, such soils are not suitable for direct "
-            "use in landfill liner or cover systems. Soil stabilization, blending, or "
-            "replacement is mandatory before application."
+        landfill_conclusion = (
+            "The predicted CBR indicates a very weak soil condition. "
+            "Such soils are not suitable for direct use in landfill liner or cover systems "
+            "due to inadequate load-bearing capacity and poor constructability. "
+            "Soil stabilization, blending, or replacement is mandatory in accordance with "
+            "EPA and CPCB landfill engineering practice."
         )
     elif prediction < 5:
-        conclusion = (
-            "The predicted CBR indicates marginal strength characteristics. In line with "
-            "EPA and CPCB landfill engineering practice, the soil may be conditionally "
-            "used for landfill cover applications only after stabilization or improvement. "
-            "Direct use as a landfill liner is not recommended."
+        landfill_conclusion = (
+            "The predicted CBR represents marginal strength. "
+            "The soil may be conditionally used for landfill cover applications after "
+            "appropriate improvement measures. Direct application as a landfill liner "
+            "is not recommended."
         )
     elif prediction < 10:
-        conclusion = (
-            "The predicted CBR represents moderate strength. The soil satisfies EPA and "
-            "CPCB requirements for landfill cover systems and may be considered for liner "
-            "applications with appropriate compaction control, protection layers, and "
-            "quality assurance measures."
+        landfill_conclusion = (
+            "The predicted CBR indicates moderate strength. "
+            "The soil is suitable for landfill cover systems and may be considered for "
+            "liner applications with controlled compaction and quality assurance measures."
         )
     else:
-        conclusion = (
-            "The predicted CBR indicates good load-bearing capacity and structural stability. "
-            "The soil complies with EPA and CPCB landfill engineering requirements and is "
-            "suitable for both landfill liner and cover applications, ensuring constructability "
-            "and long-term performance."
+        landfill_conclusion = (
+            "The predicted CBR indicates good strength and stability. "
+            "The soil is suitable for both landfill liner and cover applications, "
+            "ensuring adequate resistance to deformation during construction and operation."
         )
 
     st.markdown(
         f"<div style='color:white; background-color:#1e222a; "
-        f"padding:15px; border-radius:10px;'>"
-        f"{conclusion}</div>",
+        f"padding:15px; border-radius:10px;'>{landfill_conclusion}</div>",
         unsafe_allow_html=True
     )
 
-    # --------------------------------------------------
+    # ==================================================
+    # PAVEMENT SUBGRADE CONCLUSION
+    # ==================================================
+    st.subheader("🛣️ Engineering Conclusion – Pavement Subgrade")
+
+    if prediction < 3:
+        pavement_conclusion = (
+            "The predicted CBR indicates a very poor pavement subgrade. "
+            "Such soils are unsuitable for direct pavement construction and "
+            "require stabilization, replacement, or provision of a thick capping layer "
+            "to prevent excessive deformation and premature pavement failure."
+        )
+    elif prediction < 5:
+        pavement_conclusion = (
+            "The predicted CBR represents a poor subgrade condition. "
+            "The soil may be used for pavement construction only after significant "
+            "improvement measures such as lime or cement stabilization."
+        )
+    elif prediction < 10:
+        pavement_conclusion = (
+            "The predicted CBR indicates a fair subgrade condition. "
+            "The soil is suitable for low to medium traffic pavements provided "
+            "adequate pavement thickness is designed."
+        )
+    else:
+        pavement_conclusion = (
+            "The predicted CBR indicates good subgrade strength. "
+            "The soil is suitable for flexible pavement construction with "
+            "conventional pavement layer thicknesses."
+        )
+
+    st.markdown(
+        f"<div style='color:white; background-color:#1e222a; "
+        f"padding:15px; border-radius:10px;'>{pavement_conclusion}</div>",
+        unsafe_allow_html=True
+    )
+
+    # ==================================================
     # REPORT GENERATION
-    # --------------------------------------------------
+    # ==================================================
     now = datetime.now().strftime("%d-%m-%Y %H:%M")
 
     pdf_buffer = io.BytesIO()
     c = canvas.Canvas(pdf_buffer, pagesize=A4)
     c.setFont("Times-Roman", 12)
 
-    c.drawString(50, 800, "CBR Prediction Report (EPA / CPCB Context)")
+    c.drawString(50, 800, "CBR Prediction Report")
     c.drawString(50, 780, f"Generated on: {now}")
     c.drawString(50, 760, f"Predicted CBR: {prediction:.2f} %")
-    c.drawString(50, 740, f"Regulatory Status: {compliance}")
 
-    y_pos = 710
-    for k, v in input_data.items():
-        c.drawString(50, y_pos, f"{k}: {v}")
-        y_pos -= 16
+    c.drawString(50, 730, "Landfill Application Conclusion:")
+    c.drawString(50, 710, landfill_conclusion[:100])
 
-    c.drawString(50, y_pos - 10, "Engineering Conclusion:")
-    c.drawString(50, y_pos - 30, conclusion[:90])
-    c.drawString(50, y_pos - 45, conclusion[90:])
+    c.drawString(50, 670, "Pavement Subgrade Conclusion:")
+    c.drawString(50, 650, pavement_conclusion[:100])
 
     c.save()
     pdf_buffer.seek(0)
 
     doc = Document()
-    doc.add_heading("CBR Prediction Report (EPA / CPCB)", level=1)
+    doc.add_heading("CBR Prediction Report", level=1)
     doc.add_paragraph(f"Generated on: {now}")
     doc.add_paragraph(f"Predicted CBR: {prediction:.2f} %")
-    doc.add_paragraph(f"Regulatory Status: {compliance}")
-    doc.add_heading("Engineering Conclusion", level=2)
-    doc.add_paragraph(conclusion)
+
+    doc.add_heading("Landfill Application Conclusion", level=2)
+    doc.add_paragraph(landfill_conclusion)
+
+    doc.add_heading("Pavement Subgrade Conclusion", level=2)
+    doc.add_paragraph(pavement_conclusion)
 
     word_buffer = io.BytesIO()
     doc.save(word_buffer)
     word_buffer.seek(0)
 
-    c1, c2 = st.columns(2)
-    c1.download_button("📄 Download PDF Report", pdf_buffer, "CBR_Report.pdf", "application/pdf")
-    c2.download_button("📝 Download Word Report", word_buffer, "CBR_Report.docx")
+    col1, col2 = st.columns(2)
+    col1.download_button("📄 Download PDF Report", pdf_buffer, "CBR_Report.pdf", "application/pdf")
+    col2.download_button("📝 Download Word Report", word_buffer, "CBR_Report.docx")
 
 # ------------------------------------------------------
 # FOOTER
@@ -256,7 +287,7 @@ if st.button("🔍 Predict CBR"):
 st.markdown("---")
 st.markdown(
     "<p style='text-align:center;color:#888;'>"
-    "Decision-support tool aligned with EPA and CPCB landfill engineering practices"
+    "Decision-support tool for environmental and transportation geotechnics"
     "</p>",
     unsafe_allow_html=True
 )
